@@ -1,4 +1,4 @@
-#YouTube Channel Data Analysis
+#YouTube Channel Data Analysis#
 
 This project is a Streamlit application that fetches data from the YouTube API and stores it in a MySQL database. The application then allows users to query and visualize this data through a user-friendly interface.
 
