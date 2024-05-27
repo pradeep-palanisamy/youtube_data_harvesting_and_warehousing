@@ -5,6 +5,7 @@ This project is a Streamlit application that fetches data from the YouTube API a
 # Features #
 # APIKEY #
 Obtain a YouTube API key from the Google Developer Console and enable the YouTube Data API v3
+* generate API key and change apikey in the code *
 
 # YouTube Data Retrieval: #
 
