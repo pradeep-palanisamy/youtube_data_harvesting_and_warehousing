@@ -4,14 +4,20 @@ import mysql.connector
 import pandas as pd
 from googleapiclient.errors import HttpError
 
-api_service_name = "youtube"
-api_version = "v3"
-api_key = your Api key
 
-youtube = googleapiclient.discovery.build(api_service_name, api_version, developerKey=api_key)
+def api_connect():
+    api_service_name = "youtube"
+    api_version = "v3"
+    api_key = "AIzaSyCJMlk5RiOJ9qa4nw5PTHPo17TxRqdkNjc"
 
-channel_id = "UCPyFYlqbkxkWX_dWCg0eekA"
+    youtube = googleapiclient.discovery.build(api_service_name, api_version, developerKey=api_key)
+    return youtube
 
+youtube = api_connect()
+
+channel_id=st.text_input("Enter the channel ID")
+
+#channel data
 def youtube_channel_data(channel_id):
     request = youtube.channels().list(
         part="snippet,contentDetails,statistics",
@@ -34,6 +40,8 @@ def youtube_channel_data(channel_id):
 
 channel_detail = pd.DataFrame([youtube_channel_data(channel_id)])
 
+
+#playlist data
 def get_playlist_info(channel_id):
     next_page_token = None
     playlist_data = []
@@ -67,6 +75,7 @@ def get_playlist_info(channel_id):
 
 playlist_data_details = get_playlist_info(channel_id)
 
+#get video ids
 def get_video_ids(channel_id):
     video_ids = []
     request = youtube.channels().list(
@@ -99,6 +108,8 @@ def get_video_ids(channel_id):
 
 video_ids = get_video_ids(channel_id)
 
+
+#video data
 def get_video_info(video_ids):
     video_data = []
 
@@ -165,299 +176,255 @@ def iso_to_mysql_datetime(iso_date_str):
     return iso_date_str.replace('T', ' ').replace('Z', '')
 
 def create_channel_db(channel_detail):
-    try:
-        mydb = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="1234"
-        )
-        mycursor = mydb.cursor()
-        mycursor.execute("CREATE DATABASE IF NOT EXISTS youtube_db")
-        mycursor.execute("USE youtube_db")
-        mycursor.execute("""
-        CREATE TABLE IF NOT EXISTS channel_information (
-            channel_id VARCHAR(255) PRIMARY KEY,
-            channel_name VARCHAR(255),
-            channel_discription TEXT,
-            channel_published_at DATETIME,
-            channel_playlist_id VARCHAR(255),
-            channel_subscribers_count INT,
-            channel_video_count INT,
-            channel_views_count INT
-        )
-        """)
-        sql = """
-        INSERT INTO channel_information (
-            channel_id,
-            channel_name,
-            channel_discription,
-            channel_published_at,
-            channel_playlist_id,
-            channel_subscribers_count,
-            channel_video_count,
-            channel_views_count
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        ON DUPLICATE KEY UPDATE
-            channel_name = VALUES(channel_name),
-            channel_discription = VALUES(channel_discription),
-            channel_published_at = VALUES(channel_published_at),
-            channel_playlist_id = VALUES(channel_playlist_id),
-            channel_subscribers_count = VALUES(channel_subscribers_count),
-            channel_video_count = VALUES(channel_video_count),
-            channel_views_count = VALUES(channel_views_count)
-        """
-        values = (
-            channel_detail['channel_id'][0],
-            channel_detail['channel_name'][0],
-            channel_detail['channel_discription'][0],
-            iso_to_mysql_datetime(channel_detail['channel_published_at'][0]),
-            channel_detail['channel_playlist_id'][0],
-            int(channel_detail['channel_subscribers_count'][0]),
-            int(channel_detail['channel_video_count'][0]),
-            int(channel_detail['channel_views_count'][0])
-        )
-        mycursor.execute(sql, values)
-        mydb.commit()
-    except mysql.connector.Error as e:
-        st.error(f"Database error: {e}")
-    finally:
-        if mycursor:
+
+    mydb = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="1234"
+    )
+    mycursor = mydb.cursor()
+    mycursor.execute("CREATE DATABASE IF NOT EXISTS youtube_db")
+    mycursor.execute("USE youtube_db")
+    mycursor.execute("""
+    CREATE TABLE IF NOT EXISTS channel_information (
+        channel_id VARCHAR(255) PRIMARY KEY,
+        channel_name VARCHAR(255),
+        channel_discription TEXT,
+        channel_published_at DATETIME,
+        channel_playlist_id VARCHAR(255),
+        channel_subscribers_count INT,
+        channel_video_count INT,
+        channel_views_count INT
+    )
+    """)
+    sql = """
+    INSERT INTO channel_information (
+        channel_id,
+        channel_name,
+        channel_discription,
+        channel_published_at,
+        channel_playlist_id,
+        channel_subscribers_count,
+        channel_video_count,
+        channel_views_count
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    ON DUPLICATE KEY UPDATE
+        channel_name = VALUES(channel_name),
+        channel_discription = VALUES(channel_discription),
+        channel_published_at = VALUES(channel_published_at),
+        channel_playlist_id = VALUES(channel_playlist_id),
+        channel_subscribers_count = VALUES(channel_subscribers_count),
+        channel_video_count = VALUES(channel_video_count),
+        channel_views_count = VALUES(channel_views_count)
+    """
+    values = (
+        channel_detail['channel_id'][0],
+        channel_detail['channel_name'][0],
+        channel_detail['channel_discription'][0],
+        iso_to_mysql_datetime(channel_detail['channel_published_at'][0]),
+        channel_detail['channel_playlist_id'][0],
+        int(channel_detail['channel_subscribers_count'][0]),
+        int(channel_detail['channel_video_count'][0]),
+        int(channel_detail['channel_views_count'][0])
+    )
+    mycursor.execute(sql, values)
+    mydb.commit()
+
+    if mycursor:
             mycursor.close()
-        if mydb:
+    if mydb:
             mydb.close()
 
 create_channel_db(channel_detail)
 
 def create_video_db(video_details):
-    try:
-        mydb = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="1234"
+
+    mydb = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="1234"
+    )
+    mycursor = mydb.cursor()
+    mycursor.execute("CREATE DATABASE IF NOT EXISTS youtube_db")
+    mycursor.execute("USE youtube_db")
+    mycursor.execute("""
+    CREATE TABLE IF NOT EXISTS video_information (
+        channel_id VARCHAR(255),
+        channel_name VARCHAR(255),
+        Video_Id VARCHAR(255) PRIMARY KEY,
+        Video_Title VARCHAR(255),
+        Video_Description TEXT,
+        PublishedAt DATETIME,
+        View_Count INT,
+        Like_Count INT,
+        Favorite_Count INT,
+        Comment_Count INT,
+        Duration VARCHAR(255),
+        Caption_Status VARCHAR(255)
+    )
+    """)
+    sql = """
+    INSERT INTO video_information (
+        channel_id,
+        channel_name,
+        Video_Id,
+        Video_Title,
+        Video_Description,
+        PublishedAt,
+        View_Count,
+        Like_Count,
+        Favorite_Count,
+        Comment_Count,
+        Duration,
+        Caption_Status
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    ON DUPLICATE KEY UPDATE
+        channel_name = VALUES(channel_name),
+        Video_Title = VALUES(Video_Title),
+        Video_Description = VALUES(Video_Description),
+        PublishedAt = VALUES(PublishedAt),
+        View_Count = VALUES(View_Count),
+        Like_Count = VALUES(Like_Count),
+        Favorite_Count = VALUES(Favorite_Count),
+        Comment_Count = VALUES(Comment_Count),
+        Duration = VALUES(Duration),
+        Caption_Status = VALUES(Caption_Status)
+    """
+    for index, row in video_details.iterrows():
+        values = (
+            row['channel_id'],
+            row['channel_name'],
+            row['Video_Id'],
+            row['Video_Title'],
+            row.get('Video_Description'),
+            iso_to_mysql_datetime(row['PublishedAt']),
+            int(row['View_Count']) if row.get('View_Count') else None,
+            int(row['Like_Count']) if row.get('Like_Count') else None,
+            int(row['Favorite_Count']) if row.get('Favorite_Count') else None,
+            int(row['Comment_Count']) if row.get('Comment_Count') else None,
+            row['Duration'],
+            row['Caption_Status']
         )
-        mycursor = mydb.cursor()
-        mycursor.execute("CREATE DATABASE IF NOT EXISTS youtube_db")
-        mycursor.execute("USE youtube_db")
-        mycursor.execute("""
-        CREATE TABLE IF NOT EXISTS video_information (
-            channel_id VARCHAR(255),
-            channel_name VARCHAR(255),
-            Video_Id VARCHAR(255) PRIMARY KEY,
-            Video_Title VARCHAR(255),
-            Video_Description TEXT,
-            PublishedAt DATETIME,
-            View_Count INT,
-            Like_Count INT,
-            Favorite_Count INT,
-            Comment_Count INT,
-            Duration VARCHAR(255),
-            Caption_Status VARCHAR(255)
-        )
-        """)
-        sql = """
-        INSERT INTO video_information (
-            channel_id,
-            channel_name,
-            Video_Id,
-            Video_Title,
-            Video_Description,
-            PublishedAt,
-            View_Count,
-            Like_Count,
-            Favorite_Count,
-            Comment_Count,
-            Duration,
-            Caption_Status
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ON DUPLICATE KEY UPDATE
-            channel_name = VALUES(channel_name),
-            Video_Title = VALUES(Video_Title),
-            Video_Description = VALUES(Video_Description),
-            PublishedAt = VALUES(PublishedAt),
-            View_Count = VALUES(View_Count),
-            Like_Count = VALUES(Like_Count),
-            Favorite_Count = VALUES(Favorite_Count),
-            Comment_Count = VALUES(Comment_Count),
-            Duration = VALUES(Duration),
-            Caption_Status = VALUES(Caption_Status)
-        """
-        for index, row in video_details.iterrows():
-            values = (
-                row['channel_id'],
-                row['channel_name'],
-                row['Video_Id'],
-                row['Video_Title'],
-                row.get('Video_Description'),
-                iso_to_mysql_datetime(row['PublishedAt']),
-                int(row['View_Count']) if row.get('View_Count') else None,
-                int(row['Like_Count']) if row.get('Like_Count') else None,
-                int(row['Favorite_Count']) if row.get('Favorite_Count') else None,
-                int(row['Comment_Count']) if row.get('Comment_Count') else None,
-                row['Duration'],
-                row['Caption_Status']
-            )
-            mycursor.execute(sql, values)
-        mydb.commit()
-    except mysql.connector.Error as e:
-        st.error(f"Database error: {e}")
-    finally:
-        if mycursor:
-            mycursor.close()
-        if mydb:
-            mydb.close()
+        mycursor.execute(sql, values)
+    mydb.commit()
+
+    if mycursor:
+        mycursor.close()
+    if mydb:
+        mydb.close()
 
 create_video_db(video_details)
 
 def create_playlist_db(playlist_data_details):
-    try:
-        mydb = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="1234"
+
+    mydb = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="1234"
+    )
+    mycursor = mydb.cursor()
+    mycursor.execute("CREATE DATABASE IF NOT EXISTS youtube_db")
+    mycursor.execute("USE youtube_db")
+    mycursor.execute("""
+    CREATE TABLE IF NOT EXISTS playlist_information (
+        Playlist_id VARCHAR(255) PRIMARY KEY,
+        Playlist_Title VARCHAR(255),
+        Channel_id VARCHAR(255),
+        Channel_name VARCHAR(255),
+        playlist_published_date DATETIME,
+        playlist_count INT
+    )
+    """)
+    sql = """
+    INSERT INTO playlist_information (
+        Playlist_id,
+        Playlist_Title,
+        Channel_id,
+        Channel_name,
+        playlist_published_date,
+        playlist_count
+    ) VALUES (%s, %s, %s, %s, %s, %s)
+    ON DUPLICATE KEY UPDATE
+        Playlist_Title = VALUES(Playlist_Title),
+        Channel_id = VALUES(Channel_id),
+        Channel_name = VALUES(Channel_name),
+        playlist_published_date = VALUES(playlist_published_date),
+        playlist_count = VALUES(playlist_count)
+    """
+    for index, row in playlist_data_details.iterrows():
+        values = (
+            row['Playlist_id'],
+            row['Playlist_Title'],
+            row['Channel_id'],
+            row['Channel_name'],
+            iso_to_mysql_datetime(row['playlist_published_date']),
+            int(row['playlist_count'])
         )
-        mycursor = mydb.cursor()
-        mycursor.execute("CREATE DATABASE IF NOT EXISTS youtube_db")
-        mycursor.execute("USE youtube_db")
-        mycursor.execute("""
-        CREATE TABLE IF NOT EXISTS playlist_information (
-            Playlist_id VARCHAR(255) PRIMARY KEY,
-            Playlist_Title VARCHAR(255),
-            Channel_id VARCHAR(255),
-            Channel_name VARCHAR(255),
-            playlist_published_date DATETIME,
-            playlist_count INT
-        )
-        """)
-        sql = """
-        INSERT INTO playlist_information (
-            Playlist_id,
-            Playlist_Title,
-            Channel_id,
-            Channel_name,
-            playlist_published_date,
-            playlist_count
-        ) VALUES (%s, %s, %s, %s, %s, %s)
-        ON DUPLICATE KEY UPDATE
-            Playlist_Title = VALUES(Playlist_Title),
-            Channel_id = VALUES(Channel_id),
-            Channel_name = VALUES(Channel_name),
-            playlist_published_date = VALUES(playlist_published_date),
-            playlist_count = VALUES(playlist_count)
-        """
-        for index, row in playlist_data_details.iterrows():
-            values = (
-                row['Playlist_id'],
-                row['Playlist_Title'],
-                row['Channel_id'],
-                row['Channel_name'],
-                iso_to_mysql_datetime(row['playlist_published_date']),
-                int(row['playlist_count'])
-            )
-            mycursor.execute(sql, values)
-        mydb.commit()
-    except mysql.connector.Error as e:
-        st.error(f"Database error: {e}")
-    finally:
-        if mycursor:
-            mycursor.close()
-        if mydb:
-            mydb.close()
+        mycursor.execute(sql, values)
+
+    mydb.commit()
+
+    if mycursor:
+        mycursor.close()
+    if mydb:
+        mydb.close()
 
 create_playlist_db(playlist_data_details)
 
 def create_comment_db(comment_details):
-    try:
-        mydb = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="1234"
+
+    mydb = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="1234"
+    )
+    mycursor = mydb.cursor()
+    mycursor.execute("CREATE DATABASE IF NOT EXISTS youtube_db")
+    mycursor.execute("USE youtube_db")
+    mycursor.execute("""
+    CREATE TABLE IF NOT EXISTS comment_information (
+        channel_id VARCHAR(255),
+        Comment_ID VARCHAR(255) PRIMARY KEY,
+        Video_Id VARCHAR(255),
+        Comment_text TEXT,
+        Comment_Author VARCHAR(255),
+        Comment_published DATETIME
+    )
+    """)
+    sql = """
+    INSERT INTO comment_information (
+        channel_id,
+        Comment_ID,
+        Video_Id,
+        Comment_text,
+        Comment_Author,
+        Comment_published
+    ) VALUES (%s, %s, %s, %s, %s, %s)
+    ON DUPLICATE KEY UPDATE
+        Comment_text = VALUES(Comment_text),
+        Comment_Author = VALUES(Comment_Author),
+        Comment_published = VALUES(Comment_published)
+    """
+    for index, row in comment_details.iterrows():
+        values = (
+            row['channel_id'],
+            row['Comment_ID'],
+            row['Video_Id'],
+            row['Comment_text'],
+            row['Comment_Author'],
+            iso_to_mysql_datetime(row['Comment_published'])
         )
-        mycursor = mydb.cursor()
-        mycursor.execute("CREATE DATABASE IF NOT EXISTS youtube_db")
-        mycursor.execute("USE youtube_db")
-        mycursor.execute("""
-        CREATE TABLE IF NOT EXISTS comment_information (
-            channel_id VARCHAR(255),
-            Comment_ID VARCHAR(255) PRIMARY KEY,
-            Video_Id VARCHAR(255),
-            Comment_text TEXT,
-            Comment_Author VARCHAR(255),
-            Comment_published DATETIME
-        )
-        """)
-        sql = """
-        INSERT INTO comment_information (
-            channel_id,
-            Comment_ID,
-            Video_Id,
-            Comment_text,
-            Comment_Author,
-            Comment_published
-        ) VALUES (%s, %s, %s, %s, %s, %s)
-        ON DUPLICATE KEY UPDATE
-            Comment_text = VALUES(Comment_text),
-            Comment_Author = VALUES(Comment_Author),
-            Comment_published = VALUES(Comment_published)
-        """
-        for index, row in comment_details.iterrows():
-            values = (
-                row['channel_id'],
-                row['Comment_ID'],
-                row['Video_Id'],
-                row['Comment_text'],
-                row['Comment_Author'],
-                iso_to_mysql_datetime(row['Comment_published'])
-            )
-            mycursor.execute(sql, values)
-        mydb.commit()
-    except mysql.connector.Error as e:
-        st.error(f"Database error: {e}")
-    finally:
-        if mycursor:
-            mycursor.close()
-        if mydb:
-            mydb.close()
+        mycursor.execute(sql, values)
+    mydb.commit()
+
+    if mycursor:
+        mycursor.close()
+    if mydb:
+        mydb.close()
 
 create_comment_db(comment_details)
 
-
-st.sidebar.header("YouTube Channel Data")
-selected_page = st.sidebar.selectbox("Select a Page", ["Channel Details", "Playlist Details", "Video Details", "Comment Details"])
-
-if selected_page == "Channel Details":
-  channel_detail = pd.DataFrame([youtube_channel_data(channel_id)])
-  st.header("Channel Details")
-  st.dataframe(channel_detail)
-elif selected_page == "Playlist Details":
-  playlist_data_details = get_playlist_info(channel_id)
-  st.header("Playlist Details")
-  st.dataframe(playlist_data_details)
-elif selected_page == "Video Details":
-  video_ids = get_video_ids(channel_id)
-  video_details = get_video_info(video_ids)
-  st.header("Video Details")
-  st.dataframe(video_details)
-elif selected_page == "Comment Details":
-  video_ids = get_video_ids(channel_id)
-  comment_details = get_comment_info(video_ids)
-  st.header("Comment Details")
-  st.dataframe(comment_details)
-
-# Execute database creation functions based on selected page
-if selected_page == "Channel Details":
-  create_channel_db(channel_detail)
-elif selected_page == "Playlist Details":
-  create_playlist_db(playlist_data_details)
-elif selected_page == "Video Details":
-  create_video_db(video_details)
-elif selected_page == "Comment Details":
-  create_comment_db(comment_details)
-
-
-import streamlit as st
-import mysql.connector
-import pandas as pd
-
+#######
 def get_db_connection():
     return mysql.connector.connect(
         host="localhost",
@@ -475,6 +442,37 @@ def execute_query(query):
     cursor.close()
     connection.close()
     return pd.DataFrame(result, columns=columns)
+
+
+
+st.sidebar.header("YouTube Channel Data")
+selected_page = st.sidebar.selectbox("Select a Page", ["Channel Details", "Playlist Details", "Video Details", "Comment Details"])
+
+if selected_page == "Channel Details":
+    st.header("Channel Details")
+    query = "SELECT * FROM channel_information"
+    channel_detail = execute_query(query)
+    st.dataframe(channel_detail)
+
+elif selected_page == "Playlist Details":
+    st.header("Playlist Details")
+    query = "SELECT * FROM playlist_information"
+    playlist_data_details = execute_query(query)
+    st.dataframe(playlist_data_details)
+
+elif selected_page == "Video Details":
+    st.header("Video Details")
+    query = "SELECT * FROM video_information"
+    video_details = execute_query(query)
+    st.dataframe(video_details)
+
+elif selected_page == "Comment Details":
+    st.header("Comment Details")
+    query = "SELECT * FROM comment_information"
+    comment_details = execute_query(query)
+    st.dataframe(comment_details)
+
+
 
 # Define SQL Queries
 queries = {
