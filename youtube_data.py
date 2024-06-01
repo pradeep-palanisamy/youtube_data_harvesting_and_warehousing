@@ -2,13 +2,12 @@ import streamlit as st
 import googleapiclient.discovery
 import mysql.connector
 import pandas as pd
-from googleapiclient.errors import HttpError
 
 
 def api_connect():
     api_service_name = "youtube"
     api_version = "v3"
-    api_key = "fill your api"
+    api_key = add your API key
 
     youtube = googleapiclient.discovery.build(api_service_name, api_version, developerKey=api_key)
     return youtube
@@ -144,29 +143,25 @@ video_details = get_video_info(video_ids)
 def get_comment_info(video_ids):
     Comment_data = []
     for video_id in video_ids:
-        try:
-            request = youtube.commentThreads().list(
-                part="snippet",
-                videoId=video_id,
-                maxResults=50
-            )
-            response = request.execute()
 
-            for item in response['items']:
-                DATA = {
-                    "channel_id": item['snippet']['topLevelComment']['snippet']['authorChannelId']['value'],
-                    "Comment_ID": item['snippet']['topLevelComment']['id'],
-                    "Video_Id": item['snippet']['topLevelComment']['snippet']['videoId'],
-                    "Comment_text": item['snippet']['topLevelComment']['snippet']['textDisplay'],
-                    "Comment_Author": item['snippet']['topLevelComment']['snippet']['authorDisplayName'],
-                    "Comment_published": item['snippet']['topLevelComment']['snippet']['publishedAt']
-                }
-                Comment_data.append(DATA)
-        except HttpError as e:
-            if e.resp.status == 403:
-                st.warning(f"Comments are disabled for video ID {video_id}. Skipping...")
-            else:
-                st.error(f"An error occurred: {e}")
+        request = youtube.commentThreads().list(
+            part="snippet",
+            videoId=video_id,
+            maxResults=50
+        )
+        response = request.execute()
+
+        for item in response['items']:
+            DATA = {
+                "channel_id": item['snippet']['topLevelComment']['snippet']['authorChannelId']['value'],
+                "Comment_ID": item['snippet']['topLevelComment']['id'],
+                "Video_Id": item['snippet']['topLevelComment']['snippet']['videoId'],
+                "Comment_text": item['snippet']['topLevelComment']['snippet']['textDisplay'],
+                "Comment_Author": item['snippet']['topLevelComment']['snippet']['authorDisplayName'],
+                "Comment_published": item['snippet']['topLevelComment']['snippet']['publishedAt']
+            }
+            Comment_data.append(DATA)
+
     return pd.DataFrame(Comment_data)
 
 comment_details = get_comment_info(video_ids)
